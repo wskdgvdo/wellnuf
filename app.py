@@ -1,9 +1,18 @@
 import streamlit as st
 import openai
 import os
+import plotly.graph_objects as go
 
-# ============ 配置 ============
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# ========== API Key 管理 ==========
+# 先尝试读取环境变量，再尝试读取 Streamlit secrets
+openai_api_key = os.getenv("OPENAI_API_KEY", st.secrets.get("OPENAI_API_KEY", ""))
+
+if not openai_api_key:
+    st.error("❌ 未检测到 OpenAI API Key，请在本地环境变量或 .streamlit/secrets.toml 中配置。")
+    st.stop()
+
+openai.api_key = openai_api_key
+
 
 st.set_page_config(page_title="性激素六项评估工具", layout="centered")
 st.title("🩺 性激素六项评估 + AI 建议")
