@@ -29,12 +29,12 @@ with col2:
 
 # 参考区间
 refs = {
-    "FSH": (5, 8),
-    "LH":  (5, 8),
-    "E2":  (25, 50),
-    "P4":  (0.1, 1),
+    "FSH": (5.0, 8.0),
+    "LH":  (4.0, 7.0),
+    "E2":  (25.0, 50.0),
+    "P4":  (0.1, 1.0),
     "PRL": (3.0, 25.0),
-    "T":   (15.50),
+    "T":   (15.0, 70.0),
 }
 
 # ========== 评估函数 ==========
@@ -49,7 +49,7 @@ def evaluate_single_hormone(name, value, ref_low, ref_high):
     if value < ref_low:
         return {
             "状态": "偏低",
-            "意义": f"{name} 偏低，可能提示功能不足或下丘脑-垂体轴抑制",
+            "意义": f"{name} 偏低，可能提示性腺功能不足或下丘脑-垂体轴抑制",
             "医疗建议": f"建议复查{name}，必要时行内分泌检查",
             "生活方式建议": "保证睡眠，营养均衡，减少压力"
         }
@@ -70,13 +70,14 @@ def evaluate_single_hormone(name, value, ref_low, ref_high):
 
 # ========== 生成报告 ==========
 if st.button("生成评估报告"):
-   hormones = {
-    "FSH": (fsh, refs["FSH"][0], refs["FSH"][1]),
-    "LH": (lh, refs["LH"][0], refs["LH"][1]),
-    "E2": (e2, refs["E2"][0], refs["E2"][1]),
-    "P4": (p4, refs["P4"][0], refs["P4"][1]),
-    "PRL": (prl, refs["PRL"][0], refs["PRL"][1]),
-    "T": (t, refs["T"][0], refs["T"][1]),
+    hormones = {
+        "FSH": (fsh, *refs["FSH"]),
+        "LH": (lh, *refs["LH"]),
+        "E2": (e2, *refs["E2"]),
+        "P4": (p4, *refs["P4"]),
+        "PRL": (prl, *refs["PRL"]),
+        "T": (t, *refs["T"]),
+    }
 
     results = {}
     chart_data = []
