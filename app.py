@@ -3,18 +3,18 @@ import plotly.graph_objects as go
 
 # ========== 页面设置 ==========
 st.set_page_config(page_title="性激素六项评估工具", layout="wide")
-st.title("🩺 性激素评估工具（规则版）")
+st.title("🩺 性激素六项评估工具")
 
-st.markdown("输入基础信息和六项性激素指标，系统将根据医学参考范围进行评估，并给出医疗与生活方式建议。")
+st.markdown("输入基础信息（仅作参考）和六项性激素指标，系统将根据激素水平进行科学评估，并给出医疗与生活方式建议。")
 
-# ========== 固定变量 ==========
-st.markdown("### 📌 基础信息")
+# ========== 基础信息（仅参考，不参与评估输出） ==========
+st.markdown("### 📌 基础信息（参考）")
 col1, col2, col3 = st.columns(3)
 age = col1.number_input("年龄 (岁)", min_value=15, max_value=55, value=30)
-cycle_day = col2.number_input("当前月经第几天", min_value=1, max_value=30, value=3)  # 修改
+cycle_day = col2.number_input("当前月经第几天", min_value=1, max_value=30, value=3)
 amh = col3.number_input("AMH (ng/mL)", min_value=0.0, max_value=10.0, value=2.0)
 
-# ========== 动态变量 ==========
+# ========== 六项性激素 ==========
 st.markdown("### 🧪 六项性激素")
 col1, col2 = st.columns(2)
 with col1:
@@ -36,65 +36,62 @@ refs = {
     "T":   (15.0, 70.0),
 }
 
-# ========== 规则评估 ==========
-def evaluate_hormones(age, cycle_day, amh, fsh, lh, e2, p4, prl, t):
+# ========== 评估函数（仅针对六项性激素） ==========
+def evaluate_hormones(fsh, lh, e2, p4, prl, t, cycle_day):
     evaluation = []
     medical_advice = []
     lifestyle_advice = []
 
-    # 年龄与 AMH
-    if age > 35 and amh < 1.0:
-        evaluation.append("⚠️ 年龄>35 且 AMH<1.0：卵巢储备显著下降")
-        medical_advice.append("建议尽快进行生育力评估或辅助生殖咨询")
-        lifestyle_advice.append("保持规律作息，避免熬夜，补充抗氧化营养素（如辅酶Q10）")
-    elif amh < 1.0:
-        evaluation.append("⚠️ AMH 偏低：卵巢储备减少")
-        medical_advice.append("建议做基础窦卵泡数（AFC）超声检查")
-        lifestyle_advice.append("高蛋白、低炎症饮食有助于卵巢功能")
-    elif amh > 4.0:
-        evaluation.append("⚠️ AMH 偏高：可能存在多囊卵巢综合征风险")
-        medical_advice.append("建议行B超及代谢检查，必要时考虑内分泌科评估")
-        lifestyle_advice.append("控制体重，进行规律有氧运动")
-
-    # 月经周期天数对激素解读
-    if cycle_day <= 3:
-        evaluation.append("ℹ️ 当前为月经早期（第1-3天），适合检测基础激素。")
-    elif 4 <= cycle_day <= 14:
-        evaluation.append("ℹ️ 当前为卵泡期，注意评估卵泡发育。")
-    elif 15 <= cycle_day <= 28:
-        evaluation.append("ℹ️ 当前为黄体期，注意孕酮水平和黄体功能。")
-
-    # 六项激素
+    # FSH
     if fsh > refs["FSH"][1]:
-        evaluation.append("⚠️ FSH 偏高：卵巢功能减退")
-        medical_advice.append("建议进行基础内分泌全面检查")
-    if lh > 0 and fsh > 0 and lh/fsh > 2:
-        evaluation.append("⚠️ LH/FSH > 2：多囊卵巢综合征风险")
-        lifestyle_advice.append("建议低GI饮食和规律运动")
+        evaluation.append("⚠️ FSH 偏高：提示卵巢功能减退")
+        medical_advice.append("建议行基础内分泌检查，并结合窦卵泡数评估卵巢储备")
+    elif fsh < refs["FSH"][0]:
+        evaluation.append("⚠️ FSH 偏低：可能提示下丘脑-垂体功能抑制")
+        medical_advice.append("建议结合LH及E2水平综合判断")
+
+    # LH
+    if lh > refs["LH"][1]:
+        evaluation.append("⚠️ LH 偏高：可能为多囊卵巢综合征")
+        lifestyle_advice.append("建议低GI饮食、规律运动以改善胰岛素抵抗")
+    if fsh > 0 and lh / fsh > 2:
+        evaluation.append("⚠️ LH/FSH > 2：多囊卵巢综合征高风险")
+
+    # 雌二醇 (E2)
     if e2 < refs["E2"][0] and cycle_day <= 3:
-        evaluation.append("⚠️ 雌二醇偏低（早卵泡期）：卵泡发育不良")
-        medical_advice.append("建议在卵泡期复查E2和B超监测卵泡")
+        evaluation.append("⚠️ 雌二醇偏低（早卵泡期）：卵泡募集不足")
+        medical_advice.append("建议复查E2及B超监测卵泡")
+    elif e2 > refs["E2"][1] and cycle_day <= 3:
+        evaluation.append("⚠️ 雌二醇偏高（早卵泡期）：可能有卵泡早发育")
+    elif e2 < refs["E2"][0] and cycle_day > 14:
+        evaluation.append("⚠️ 雌二醇偏低（黄体期）：可能影响子宫内膜发育")
+
+    # 孕酮 (P4)
     if p4 < refs["P4"][1] and cycle_day >= 15:
         evaluation.append("⚠️ 孕酮偏低（黄体期）：黄体功能不足")
-        medical_advice.append("建议黄体期复查孕酮，必要时补充黄体支持")
+        medical_advice.append("建议黄体期补充孕酮支持")
+
+    # 泌乳素 (PRL)
     if prl > refs["PRL"][1]:
         evaluation.append("⚠️ 泌乳素偏高：可能为高泌乳素血症")
-        medical_advice.append("建议行垂体MRI及内分泌科就诊")
+        medical_advice.append("建议复查PRL并考虑垂体MRI")
+
+    # 睾酮 (T)
     if t > refs["T"][1]:
         evaluation.append("⚠️ 睾酮偏高：高雄激素状态")
-        lifestyle_advice.append("减少高糖饮食，增加阻力训练")
+        lifestyle_advice.append("建议低糖饮食，增加有氧及力量训练")
 
     if not evaluation:
-        evaluation = ["✅ 指标基本正常，卵巢功能及激素状态良好"]
-        lifestyle_advice = ["保持健康作息，均衡饮食，定期复查"]
+        evaluation = ["✅ 六项性激素均在正常范围，内分泌状态良好"]
+        lifestyle_advice = ["保持健康作息，规律运动，均衡饮食"]
 
     return evaluation, medical_advice, lifestyle_advice
 
 # ========== 生成报告 ==========
 if st.button("生成评估报告"):
-    evaluation, medical_advice, lifestyle_advice = evaluate_hormones(age, cycle_day, amh, fsh, lh, e2, p4, prl, t)
+    evaluation, medical_advice, lifestyle_advice = evaluate_hormones(fsh, lh, e2, p4, prl, t, cycle_day)
 
-    st.markdown("### 📊 评估结果")
+    st.markdown("### 📊 激素评估结果")
     for item in evaluation:
         st.write(item)
 
