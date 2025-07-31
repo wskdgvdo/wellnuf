@@ -13,7 +13,9 @@ if not openai_api_key:
 
 openai.api_key = openai_api_key
 
-
+import os
+import streamlit as st
+openai.api_key = os.getenv("OPENAI_API_KEY", st.secrets.get("OPENAI_API_KEY", ""))
 st.set_page_config(page_title="性激素六项评估工具", layout="centered")
 st.title("🩺 性激素六项评估 + AI 建议")
 
