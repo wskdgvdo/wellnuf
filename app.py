@@ -1,70 +1,11 @@
 import streamlit as st
-import openai
-import os
 import plotly.graph_objects as go
-import os
-import streamlit as st
-import openai
-
-# ========== API Key 检查器 ==========
-# 兼容 环境变量 / secrets.toml
-openai_api_key = (
-    os.getenv("OPENAI_API_KEY")
-    or st.secrets.get("OPENAI_API_KEY")
-    or st.secrets.get("general", {}).get("OPENAI_API_KEY")
-)
-
-st.subheader("🔑 API Key 检查器")
-
-if not openai_api_key:
-    st.error("""
-    ❌ 未检测到 OpenAI API Key。
-    解决方法：
-    1. 本地环境变量设置：
-       - macOS / Linux: export OPENAI_API_KEY="sk-xxxx"
-       - Windows PowerShell: setx OPENAI_API_KEY "sk-xxxx"
-    2. 或者在 .streamlit/secrets.toml 中配置：
-       [general]
-       OPENAI_API_KEY = "sk-xxxx"
-    """)
-    st.stop()
-
-openai.api_key = openai_api_key
-
-# 显示 Key 前 5 位进行确认
-st.success(f"✅ 已检测到 API Key: {openai_api_key[:5]}***")
-
-# 验证 Key 是否有效
-with st.spinner("正在验证 API Key..."):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "测试API Key是否可用，仅回答：OK"}],
-            max_tokens=5,
-        )
-        st.success(f"API Key 验证成功，模型回复：{response.choices[0].message.content}")
-    except Exception as e:
-        st.error(f"❌ API Key 验证失败：{e}")
-        st.stop()
-
-# ========== API Key ==========
-openai_api_key = (
-    os.getenv("OPENAI_API_KEY")
-    or st.secrets.get("OPENAI_API_KEY")
-    or st.secrets.get("general", {}).get("OPENAI_API_KEY")
-)
-
-if not openai_api_key:
-    st.error("❌ 未检测到 OpenAI API Key，请在环境变量或 .streamlit/secrets.toml 中配置。")
-    st.stop()
-st.write(os.getenv("OPENAI_API_KEY"))
-openai.api_key = openai_api_key
 
 # ========== 页面设置 ==========
 st.set_page_config(page_title="性激素六项评估工具", layout="wide")
-st.title("🩺 性激素评估工具（基于年龄、月经天数、AMH）")
+st.title("🩺 性激素评估工具（规则版）")
 
-st.markdown("请先填写 **年龄、月经天数、AMH**，然后填写六项性激素，工具会基于这些变量提供科学评估和 AI 建议。")
+st.markdown("输入基础信息和六项性激素指标，系统将根据医学参考范围进行评估，并给出医疗与生活方式建议。")
 
 # ========== 固定变量 ==========
 st.markdown("### 📌 基础信息")
@@ -97,50 +38,68 @@ refs = {
 
 # ========== 规则评估 ==========
 def evaluate_hormones(age, menstrual_days, amh, fsh, lh, e2, p4, prl, t):
-    report = []
+    evaluation = []
+    medical_advice = []
+    lifestyle_advice = []
 
-    # 年龄与AMH
+    # 年龄与 AMH
     if age > 35 and amh < 1.0:
-        report.append("⚠️ 年龄>35 且 AMH<1.0：卵巢储备显著下降，建议尽快助孕。")
+        evaluation.append("⚠️ 年龄>35 且 AMH<1.0：卵巢储备显著下降")
+        medical_advice.append("建议尽快进行生育力评估或辅助生殖咨询")
+        lifestyle_advice.append("保持规律作息，避免熬夜，补充抗氧化营养素（如辅酶Q10）")
     elif amh < 1.0:
-        report.append("⚠️ AMH 偏低：卵巢储备减少，需早期干预。")
+        evaluation.append("⚠️ AMH 偏低：卵巢储备减少")
+        medical_advice.append("建议做基础窦卵泡数（AFC）超声检查")
+        lifestyle_advice.append("高蛋白、低炎症饮食有助于卵巢功能")
     elif amh > 4.0:
-        report.append("⚠️ AMH 偏高：提示可能存在多囊卵巢综合征风险。")
+        evaluation.append("⚠️ AMH 偏高：可能存在多囊卵巢综合征风险")
+        medical_advice.append("建议行B超及代谢检查，必要时考虑内分泌科评估")
+        lifestyle_advice.append("控制体重，进行规律有氧运动")
 
     # 月经天数
     if menstrual_days < 3:
-        report.append("⚠️ 月经天数过短：可能提示雌激素偏低或内膜发育不良。")
+        evaluation.append("⚠️ 月经天数过短：可能提示雌激素偏低或内膜发育不良")
+        medical_advice.append("建议检查雌二醇和子宫内膜厚度")
+        lifestyle_advice.append("可增加健康脂肪摄入，如深海鱼、橄榄油")
     elif menstrual_days > 7:
-        report.append("⚠️ 月经天数过长：需警惕子宫内膜病变或内分泌异常。")
+        evaluation.append("⚠️ 月经天数过长：需警惕子宫内膜病变")
+        medical_advice.append("建议做盆腔超声，必要时行宫腔镜检查")
 
     # 六项激素
-    if fsh > 0:
-        if fsh > refs["FSH"][1]:
-            report.append("⚠️ FSH 偏高：卵巢功能减退可能。")
+    if fsh > refs["FSH"][1]:
+        evaluation.append("⚠️ FSH 偏高：卵巢功能减退")
+        medical_advice.append("建议进行基础内分泌全面检查")
     if lh > 0 and fsh > 0 and lh/fsh > 2:
-        report.append("⚠️ LH/FSH>2：多囊卵巢综合征风险。")
-    if e2 > 0:
-        if e2 < refs["E2"][0]:
-            report.append("⚠️ 雌二醇偏低：卵泡发育不良可能。")
-    if p4 > 0 and p4 < refs["P4"][1]:
-        report.append("⚠️ 孕酮偏低：黄体功能不足可能影响着床。")
+        evaluation.append("⚠️ LH/FSH > 2：多囊卵巢综合征风险")
+        lifestyle_advice.append("建议低GI饮食和规律运动")
+    if e2 < refs["E2"][0]:
+        evaluation.append("⚠️ 雌二醇偏低：卵泡发育不良")
+        medical_advice.append("建议在卵泡期复查E2和B超监测卵泡")
+    if p4 < refs["P4"][1]:
+        evaluation.append("⚠️ 孕酮偏低：黄体功能不足")
+        medical_advice.append("建议黄体期复查孕酮，必要时补充黄体支持")
     if prl > refs["PRL"][1]:
-        report.append("⚠️ 泌乳素偏高：需排查垂体高泌乳素血症。")
+        evaluation.append("⚠️ 泌乳素偏高：可能为高泌乳素血症")
+        medical_advice.append("建议行垂体MRI及内分泌科就诊")
     if t > refs["T"][1]:
-        report.append("⚠️ 睾酮偏高：提示高雄激素状态，常见于PCOS。")
+        evaluation.append("⚠️ 睾酮偏高：高雄激素状态")
+        lifestyle_advice.append("减少高糖饮食，增加阻力训练")
 
-    if not report:
-        report = ["✅ 指标基本正常，建议继续保持健康生活方式。"]
-    return report
+    if not evaluation:
+        evaluation = ["✅ 指标基本正常，卵巢功能及激素状态良好"]
+        lifestyle_advice = ["保持健康作息，均衡饮食，定期复查"]
 
-# ========== 生成评估报告 ==========
+    return evaluation, medical_advice, lifestyle_advice
+
+# ========== 生成报告 ==========
 if st.button("生成评估报告"):
-    st.markdown("### 📊 评估结果")
-    report = evaluate_hormones(age, menstrual_days, amh, fsh, lh, e2, p4, prl, t)
-    for line in report:
-        st.write(line)
+    evaluation, medical_advice, lifestyle_advice = evaluate_hormones(age, menstrual_days, amh, fsh, lh, e2, p4, prl, t)
 
-    # ========= 雷达图 =========
+    st.markdown("### 📊 评估结果")
+    for item in evaluation:
+        st.write(item)
+
+    # 雷达图
     st.markdown("### 📈 激素雷达图")
     labels = ["FSH", "LH", "E2", "P4", "PRL", "T"]
     values = [fsh, lh, e2, p4, prl, t]
@@ -152,21 +111,18 @@ if st.button("生成评估报告"):
     fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(max_vals)*1.2])), showlegend=True)
     st.plotly_chart(fig, use_container_width=True)
 
-    # ========= AI 建议 =========
-    st.markdown("### 🤖 AI 医疗与生活方式建议")
-    prompt = (
-        f"患者信息：年龄 {age} 岁，月经天数 {menstrual_days} 天，AMH {amh} ng/mL。\n"
-        f"激素指标：FSH={fsh}, LH={lh}, E2={e2}, P4={p4}, PRL={prl}, T={t}\n"
-        "请结合基础信息与激素指标，提供：\n"
-        "1. 医学评估（2-3句）；\n"
-        "2. 医疗建议（如是否需进一步检查或治疗方案）；\n"
-        "3. 生活方式建议（饮食、运动、作息）。"
-    )
-    with st.spinner("AI 正在生成建议..."):
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=500,
-        )
-        st.write(response.choices[0].message.content)
+    # 医疗建议
+    st.markdown("### 🏥 医疗建议")
+    if medical_advice:
+        for advice in medical_advice:
+            st.write(f"- {advice}")
+    else:
+        st.write("- 暂无特殊医疗建议，建议定期复查。")
+
+    # 生活方式建议
+    st.markdown("### 🥗 生活方式建议")
+    if lifestyle_advice:
+        for advice in lifestyle_advice:
+            st.write(f"- {advice}")
+    else:
+        st.write("- 保持规律作息，均衡饮食，适度运动")
