@@ -70,14 +70,13 @@ def evaluate_single_hormone(name, value, ref_low, ref_high):
 
 # ========== 生成报告 ==========
 if st.button("生成评估报告"):
-    hormones = {
-        "FSH": (fsh, *refs["FSH"]),
-        "LH": (lh, *refs["LH"]),
-        "E2": (e2, *refs["E2"]),
-        "P4": (p4, *refs["P4"]),
-        "PRL": (prl, *refs["PRL"]),
-        "T": (t, *refs["T"]),
-    }
+   hormones = {
+    "FSH": (fsh, refs["FSH"][0], refs["FSH"][1]),
+    "LH": (lh, refs["LH"][0], refs["LH"][1]),
+    "E2": (e2, refs["E2"][0], refs["E2"][1]),
+    "P4": (p4, refs["P4"][0], refs["P4"][1]),
+    "PRL": (prl, refs["PRL"][0], refs["PRL"][1]),
+    "T": (t, refs["T"][0], refs["T"][1]),
 
     results = {}
     chart_data = []
