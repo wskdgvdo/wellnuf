@@ -1,14 +1,15 @@
 import streamlit as st
-import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
 
 # ========== 页面设置 ==========
 st.set_page_config(page_title="性激素六项评估工具", layout="wide")
-st.title("🩺 性激素六项评估工具")
+st.title("🩺 性激素六项评估工具（详细版）")
 
-st.markdown("输入基础信息（仅作参考）和六项性激素指标，系统将根据激素水平进行科学评估，并给出医疗与生活方式建议。")
+st.markdown("输入基础信息和六项性激素指标，系统将针对每个指标给出科学评估（高/低/正常）、医学意义及建议。")
 
 # ========== 基础信息（仅参考，不参与评估输出） ==========
-st.markdown("### 📌 基础信息（参考）")
+st.markdown("### 📌 基础信息（仅参考）")
 col1, col2, col3 = st.columns(3)
 age = col1.number_input("年龄 (岁)", min_value=15, max_value=55, value=30)
 cycle_day = col2.number_input("当前月经第几天", min_value=1, max_value=30, value=3)
@@ -26,7 +27,7 @@ with col2:
     prl = st.number_input("泌乳素 PRL (ng/mL)", min_value=0.0, step=0.1)
     t   = st.number_input("睾酮 T (ng/dL)", min_value=0.0, step=0.1)
 
-# ========== 参考区间 ==========
+# 参考区间
 refs = {
     "FSH": (2.5, 10.2),
     "LH":  (1.9, 12.5),
@@ -36,89 +37,84 @@ refs = {
     "T":   (15.0, 70.0),
 }
 
-# ========== 评估函数（仅针对六项性激素） ==========
-def evaluate_hormones(fsh, lh, e2, p4, prl, t, cycle_day):
-    evaluation = []
-    medical_advice = []
-    lifestyle_advice = []
-
-    # FSH
-    if fsh > refs["FSH"][1]:
-        evaluation.append("⚠️ FSH 偏高：提示卵巢功能减退")
-        medical_advice.append("建议行基础内分泌检查，并结合窦卵泡数评估卵巢储备")
-    elif fsh < refs["FSH"][0]:
-        evaluation.append("⚠️ FSH 偏低：可能提示下丘脑-垂体功能抑制")
-        medical_advice.append("建议结合LH及E2水平综合判断")
-
-    # LH
-    if lh > refs["LH"][1]:
-        evaluation.append("⚠️ LH 偏高：可能为多囊卵巢综合征")
-        lifestyle_advice.append("建议低GI饮食、规律运动以改善胰岛素抵抗")
-    if fsh > 0 and lh / fsh > 2:
-        evaluation.append("⚠️ LH/FSH > 2：多囊卵巢综合征高风险")
-
-    # 雌二醇 (E2)
-    if e2 < refs["E2"][0] and cycle_day <= 3:
-        evaluation.append("⚠️ 雌二醇偏低（早卵泡期）：卵泡募集不足")
-        medical_advice.append("建议复查E2及B超监测卵泡")
-    elif e2 > refs["E2"][1] and cycle_day <= 3:
-        evaluation.append("⚠️ 雌二醇偏高（早卵泡期）：可能有卵泡早发育")
-    elif e2 < refs["E2"][0] and cycle_day > 14:
-        evaluation.append("⚠️ 雌二醇偏低（黄体期）：可能影响子宫内膜发育")
-
-    # 孕酮 (P4)
-    if p4 < refs["P4"][1] and cycle_day >= 15:
-        evaluation.append("⚠️ 孕酮偏低（黄体期）：黄体功能不足")
-        medical_advice.append("建议黄体期补充孕酮支持")
-
-    # 泌乳素 (PRL)
-    if prl > refs["PRL"][1]:
-        evaluation.append("⚠️ 泌乳素偏高：可能为高泌乳素血症")
-        medical_advice.append("建议复查PRL并考虑垂体MRI")
-
-    # 睾酮 (T)
-    if t > refs["T"][1]:
-        evaluation.append("⚠️ 睾酮偏高：高雄激素状态")
-        lifestyle_advice.append("建议低糖饮食，增加有氧及力量训练")
-
-    if not evaluation:
-        evaluation = ["✅ 六项性激素均在正常范围，内分泌状态良好"]
-        lifestyle_advice = ["保持健康作息，规律运动，均衡饮食"]
-
-    return evaluation, medical_advice, lifestyle_advice
+# ========== 评估函数 ==========
+def evaluate_single_hormone(name, value, ref_low, ref_high):
+    if value == 0:
+        return {
+            "状态": "未输入",
+            "意义": "未提供数据",
+            "医疗建议": "请填写此项指标以便评估",
+            "生活方式建议": "无"
+        }
+    if value < ref_low:
+        return {
+            "状态": "偏低",
+            "意义": f"{name} 偏低，可能提示功能不足或下丘脑-垂体轴抑制",
+            "医疗建议": f"建议复查{name}，必要时行内分泌检查",
+            "生活方式建议": "保证睡眠，营养均衡，减少压力"
+        }
+    elif value > ref_high:
+        return {
+            "状态": "偏高",
+            "意义": f"{name} 偏高，可能提示功能异常或相关疾病风险",
+            "医疗建议": f"建议复查{name}，必要时行影像学检查及内分泌就诊",
+            "生活方式建议": "控制体重，均衡饮食，避免过度压力"
+        }
+    else:
+        return {
+            "状态": "正常",
+            "意义": f"{name} 在正常范围，功能稳定",
+            "医疗建议": "维持健康生活方式，定期复查",
+            "生活方式建议": "保持规律作息与适度运动"
+        }
 
 # ========== 生成报告 ==========
 if st.button("生成评估报告"):
-    evaluation, medical_advice, lifestyle_advice = evaluate_hormones(fsh, lh, e2, p4, prl, t, cycle_day)
+    hormones = {
+        "FSH": (fsh, *refs["FSH"]),
+        "LH": (lh, *refs["LH"]),
+        "E2": (e2, *refs["E2"]),
+        "P4": (p4, *refs["P4"]),
+        "PRL": (prl, *refs["PRL"]),
+        "T": (t, *refs["T"]),
+    }
 
-    st.markdown("### 📊 激素评估结果")
-    for item in evaluation:
-        st.write(item)
+    results = {}
+    chart_data = []
 
-    # 雷达图
-    st.markdown("### 📈 激素雷达图")
-    labels = ["FSH", "LH", "E2", "P4", "PRL", "T"]
-    values = [fsh, lh, e2, p4, prl, t]
-    max_vals = [refs[k][1] for k in labels]
+    for name, (val, low, high) in hormones.items():
+        result = evaluate_single_hormone(name, val, low, high)
+        results[name] = result
+        chart_data.append({"激素": name, "数值": val, "参考下限": low, "参考上限": high})
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(r=values, theta=labels, fill='toself', name='当前指标'))
-    fig.add_trace(go.Scatterpolar(r=max_vals, theta=labels, fill='toself', name='参考上限', line=dict(dash='dash')))
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(max_vals)*1.2])), showlegend=True)
+    # 输出详细评估
+    st.markdown("### 📊 评估结果（逐项分析）")
+    for hormone, res in results.items():
+        st.markdown(f"#### {hormone}")
+        st.write(f"- 状态：**{res['状态']}**")
+        st.write(f"- 意义：{res['意义']}")
+        st.write(f"- 医疗建议：{res['医疗建议']}")
+        st.write(f"- 生活方式建议：{res['生活方式建议']}")
+        st.markdown("---")
+
+    # 绘制柱状图
+    st.markdown("### 📈 激素水平对比图")
+    df = pd.DataFrame(chart_data)
+
+    fig = px.bar(
+        df,
+        x="激素",
+        y="数值",
+        color="激素",
+        text="数值",
+        title="性激素六项水平与参考区间对比"
+    )
+
+    # 添加参考区间
+    for _, row in df.iterrows():
+        fig.add_shape(type="line", x0=row["激素"], x1=row["激素"], y0=row["参考下限"], y1=row["参考上限"],
+                      line=dict(color="green", dash="dot"))
+
+    fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
+    fig.update_layout(yaxis=dict(title="数值"), xaxis=dict(title="激素"))
     st.plotly_chart(fig, use_container_width=True)
-
-    # 医疗建议
-    st.markdown("### 🏥 医疗建议")
-    if medical_advice:
-        for advice in medical_advice:
-            st.write(f"- {advice}")
-    else:
-        st.write("- 暂无特殊医疗建议，建议定期复查。")
-
-    # 生活方式建议
-    st.markdown("### 🥗 生活方式建议")
-    if lifestyle_advice:
-        for advice in lifestyle_advice:
-            st.write(f"- {advice}")
-    else:
-        st.write("- 保持规律作息，均衡饮食，适度运动")
