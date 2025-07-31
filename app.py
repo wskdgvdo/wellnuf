@@ -11,7 +11,7 @@ st.markdown("输入基础信息和六项性激素指标，系统将根据医学�
 st.markdown("### 📌 基础信息")
 col1, col2, col3 = st.columns(3)
 age = col1.number_input("年龄 (岁)", min_value=15, max_value=55, value=30)
-menstrual_days = col2.number_input("月经天数 (天)", min_value=1, max_value=10, value=5)
+cycle_day = col2.number_input("当前月经第几天", min_value=1, max_value=30, value=3)  # 修改
 amh = col3.number_input("AMH (ng/mL)", min_value=0.0, max_value=10.0, value=2.0)
 
 # ========== 动态变量 ==========
@@ -37,7 +37,7 @@ refs = {
 }
 
 # ========== 规则评估 ==========
-def evaluate_hormones(age, menstrual_days, amh, fsh, lh, e2, p4, prl, t):
+def evaluate_hormones(age, cycle_day, amh, fsh, lh, e2, p4, prl, t):
     evaluation = []
     medical_advice = []
     lifestyle_advice = []
@@ -56,14 +56,13 @@ def evaluate_hormones(age, menstrual_days, amh, fsh, lh, e2, p4, prl, t):
         medical_advice.append("建议行B超及代谢检查，必要时考虑内分泌科评估")
         lifestyle_advice.append("控制体重，进行规律有氧运动")
 
-    # 月经天数
-    if menstrual_days < 3:
-        evaluation.append("⚠️ 月经天数过短：可能提示雌激素偏低或内膜发育不良")
-        medical_advice.append("建议检查雌二醇和子宫内膜厚度")
-        lifestyle_advice.append("可增加健康脂肪摄入，如深海鱼、橄榄油")
-    elif menstrual_days > 7:
-        evaluation.append("⚠️ 月经天数过长：需警惕子宫内膜病变")
-        medical_advice.append("建议做盆腔超声，必要时行宫腔镜检查")
+    # 月经周期天数对激素解读
+    if cycle_day <= 3:
+        evaluation.append("ℹ️ 当前为月经早期（第1-3天），适合检测基础激素。")
+    elif 4 <= cycle_day <= 14:
+        evaluation.append("ℹ️ 当前为卵泡期，注意评估卵泡发育。")
+    elif 15 <= cycle_day <= 28:
+        evaluation.append("ℹ️ 当前为黄体期，注意孕酮水平和黄体功能。")
 
     # 六项激素
     if fsh > refs["FSH"][1]:
@@ -72,11 +71,11 @@ def evaluate_hormones(age, menstrual_days, amh, fsh, lh, e2, p4, prl, t):
     if lh > 0 and fsh > 0 and lh/fsh > 2:
         evaluation.append("⚠️ LH/FSH > 2：多囊卵巢综合征风险")
         lifestyle_advice.append("建议低GI饮食和规律运动")
-    if e2 < refs["E2"][0]:
-        evaluation.append("⚠️ 雌二醇偏低：卵泡发育不良")
+    if e2 < refs["E2"][0] and cycle_day <= 3:
+        evaluation.append("⚠️ 雌二醇偏低（早卵泡期）：卵泡发育不良")
         medical_advice.append("建议在卵泡期复查E2和B超监测卵泡")
-    if p4 < refs["P4"][1]:
-        evaluation.append("⚠️ 孕酮偏低：黄体功能不足")
+    if p4 < refs["P4"][1] and cycle_day >= 15:
+        evaluation.append("⚠️ 孕酮偏低（黄体期）：黄体功能不足")
         medical_advice.append("建议黄体期复查孕酮，必要时补充黄体支持")
     if prl > refs["PRL"][1]:
         evaluation.append("⚠️ 泌乳素偏高：可能为高泌乳素血症")
@@ -93,7 +92,7 @@ def evaluate_hormones(age, menstrual_days, amh, fsh, lh, e2, p4, prl, t):
 
 # ========== 生成报告 ==========
 if st.button("生成评估报告"):
-    evaluation, medical_advice, lifestyle_advice = evaluate_hormones(age, menstrual_days, amh, fsh, lh, e2, p4, prl, t)
+    evaluation, medical_advice, lifestyle_advice = evaluate_hormones(age, cycle_day, amh, fsh, lh, e2, p4, prl, t)
 
     st.markdown("### 📊 评估结果")
     for item in evaluation:
