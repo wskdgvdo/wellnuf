@@ -2,6 +2,50 @@ import streamlit as st
 import openai
 import os
 import plotly.graph_objects as go
+import os
+import streamlit as st
+import openai
+
+# ========== API Key 检查器 ==========
+# 兼容 环境变量 / secrets.toml
+openai_api_key = (
+    os.getenv("OPENAI_API_KEY")
+    or st.secrets.get("OPENAI_API_KEY")
+    or st.secrets.get("general", {}).get("OPENAI_API_KEY")
+)
+
+st.subheader("🔑 API Key 检查器")
+
+if not openai_api_key:
+    st.error("""
+    ❌ 未检测到 OpenAI API Key。
+    解决方法：
+    1. 本地环境变量设置：
+       - macOS / Linux: export OPENAI_API_KEY="sk-xxxx"
+       - Windows PowerShell: setx OPENAI_API_KEY "sk-xxxx"
+    2. 或者在 .streamlit/secrets.toml 中配置：
+       [general]
+       OPENAI_API_KEY = "sk-xxxx"
+    """)
+    st.stop()
+
+openai.api_key = openai_api_key
+
+# 显示 Key 前 5 位进行确认
+st.success(f"✅ 已检测到 API Key: {openai_api_key[:5]}***")
+
+# 验证 Key 是否有效
+with st.spinner("正在验证 API Key..."):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": "测试API Key是否可用，仅回答：OK"}],
+            max_tokens=5,
+        )
+        st.success(f"API Key 验证成功，模型回复：{response.choices[0].message.content}")
+    except Exception as e:
+        st.error(f"❌ API Key 验证失败：{e}")
+        st.stop()
 
 # ========== API Key ==========
 openai_api_key = (
