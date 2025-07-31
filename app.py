@@ -13,7 +13,7 @@ openai_api_key = (
 if not openai_api_key:
     st.error("❌ 未检测到 OpenAI API Key，请在环境变量或 .streamlit/secrets.toml 中配置。")
     st.stop()
-
+st.write(os.getenv("OPENAI_API_KEY"))
 openai.api_key = openai_api_key
 
 # ========== 页面设置 ==========
