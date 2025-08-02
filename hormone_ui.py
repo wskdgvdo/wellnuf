@@ -28,7 +28,6 @@ REFERENCE = {
     "排卵期":   {"FSH": (3, 10), "LH": (10,20), "E2": (150,400), "P": (0, 3),  "PRL": (5, 25), "T": (20, 60)},
     "黄体期":   {"FSH": (2, 8),  "LH": (1, 12), "E2": (100,250), "P": (10,20),  "PRL": (5, 25), "T": (20, 60)}
 }
-
 # 激素AI管理建议
 AI_SUGGESTIONS = {
     "FSH偏高":  "卵巢储备下降；建议检测AMH、窦卵泡数，补充辅酶Q10，规律作息，必要时就诊生殖科。",
@@ -78,7 +77,7 @@ def evaluate_hormones(fsh, lh, e2, p, prl, t, cycle_day):
     phase = get_phase(cycle_day)
     ref = REFERENCE[phase]
     data, suggestions = [], set()
-    for name, value in {"FSH":fsh,"LH":lh,"E2":e2,"P":p,"PRL":prl,"T":t}.items():
+    for name, value in {"FSH":fsh, "LH":lh, "E2":e2, "P":p, "PRL":prl, "T":t}.items():
         low, high = ref[name]
         if value < low:
             status, color = "偏低", "yellow"
@@ -86,75 +85,82 @@ def evaluate_hormones(fsh, lh, e2, p, prl, t, cycle_day):
             status, color = "偏高", "red"
         else:
             status, color = "正常", "green"
-        data.append({"激素":name,"数值":round(value,1),"状态":status,"颜色":color,"参考低":low,"参考高":high})
+        data.append({"激素":name, "数值":round(value,1), "状态":status, "颜色":color, "参考低":low, "参考高":high})
         key = f"{name}{status}"
         if key in AI_SUGGESTIONS:
             suggestions.add(AI_SUGGESTIONS[key])
-    if fsh>0 and lh/fsh>2:
+    if fsh > 0 and lh / fsh > 2:
         suggestions.add(AI_SUGGESTIONS["LH/FSH高"])
     return phase, pd.DataFrame(data), list(suggestions)
 
-
 def plot_hormones(df, phase):
-    fig=go.Figure()
-    for idx,row in df.iterrows():
-        fig.add_trace(go.Bar(x=[row['激素']],y=[row['数值']],marker_color=row['颜色'],name=row['状态']))
-        fig.add_shape(type='rect',x0=idx-0.4,x1=idx+0.4,y0=row['参考低'],y1=row['参考高'],fillcolor='LightBlue',opacity=0.2,layer='below',line_width=0)
-    fig.update_layout(title=f"{phase} 激素水平对比",xaxis_title="激素",yaxis_title="数值",legend_title="状态")
+    fig = go.Figure()
+    for idx, row in df.iterrows():
+        fig.add_trace(go.Bar(x=[row['激素']], y=[row['数值']], marker_color=row['颜色'], name=row['状态']))
+        fig.add_shape(type='rect', x0=idx-0.4, x1=idx+0.4, y0=row['参考低'], y1=row['参考高'], fillcolor='LightBlue', opacity=0.2, layer='below', line_width=0)
+    fig.update_layout(title=f"{phase} 激素水平对比", xaxis_title="激素", yaxis_title="数值", legend_title="状态")
     return fig
 
 
 def main():
-    st.set_page_config(page_title="女性激素六项评估",layout="wide")
+    st.set_page_config(page_title="女性激素六项评估", layout="wide")
     st.title("💡 女性激素六项评估工具 + AI管理建议")
 
-    # 基础信息输入
-    age=st.number_input("年龄 (岁)",0,120,30)
-    amh=st.number_input("AMH (ng/mL)",0.0,step=0.1,value=2.0)
-    cycle=st.number_input("月经周期 (天)",1,365,28)
-    period_len=st.number_input("经期长度 (天)",1,30,5)
-    blood_vol=st.number_input("经期血量 (mL)",0.0,step=1.0,value=30.0)
-    month_day=st.number_input("月经天数 (第几天)",1,30,7)
+    # 基础信息卡片
+    with st.expander("一、基础信息输入", expanded=True):
+        age = st.number_input("年龄 (岁)", min_value=0, max_value=120, value=30)
+        amh = st.number_input("AMH (ng/mL)", min_value=0.0, step=0.1, value=2.0)
+        cycle = st.number_input("月经周期 (天)", min_value=1, max_value=365, value=28)
+        period_len = st.number_input("经期长度 (天)", min_value=1, max_value=30, value=5)
+        blood_vol = st.number_input("经期血量 (mL)", min_value=0.0, step=1.0, value=30.0)
+        month_day = st.number_input("月经天数 (第几天)", min_value=1, max_value=30, value=7)
 
-    # 性激素输入
-    fsh = st.number_input("FSH (mIU/mL)", min_value=0.0, step=0.1, value=5.0)
-    lh = st.number_input("LH (mIU/mL)", min_value=0.0, step=0.1, value=5.0)
-    e2 = st.number_input("雌二醇 E2 (pg/mL)", min_value=0.0, step=1.0, value=100.0)
-    p = st.number_input("孕酮 P (ng/mL)", min_value=0.0, step=0.1, value=1.0)
-    prl = st.number_input("泌乳素 PRL (ng/mL)", min_value=0.0, step=0.1, value=15.0)
-    t = st.number_input("睾酮 T (ng/dL)", min_value=0.0, step=0.1, value=25.0)
+    # 性激素卡片
+    with st.expander("二、性激素六项输入", expanded=True):
+        fsh = st.number_input("FSH (mIU/mL)", min_value=0.0, step=0.1, value=5.0)
+        lh = st.number_input("LH (mIU/mL)", min_value=0.0, step=0.1, value=5.0)
+        e2 = st.number_input("雌二醇 E2 (pg/mL)", min_value=0.0, step=1.0, value=100.0)
+        p = st.number_input("孕酮 P (ng/mL)", min_value=0.0, step=0.1, value=1.0)
+        prl = st.number_input("泌乳素 PRL (ng/mL)", min_value=0.0, step=0.1, value=15.0)
+        t = st.number_input("睾酮 T (ng/dL)", min_value=0.0, step=0.1, value=25.0)
 
+    # 评估按钮
     if st.button("开始评估"):
-        basic_df,basic_sugg=evaluate_basic(age,amh,cycle,period_len,blood_vol)
+        # 基础信息评估结果
+        basic_df, basic_sugg = evaluate_basic(age, amh, cycle, period_len, blood_vol)
         st.subheader("📋 基础信息评估结果")
-        recs=basic_df.to_dict('records')
-        cols=st.columns(len(recs))
-        for i,r in enumerate(recs):
-            c=cols[i]
+        recs = basic_df.to_dict('records')
+        cols = st.columns(len(recs))
+        for i, r in enumerate(recs):
+            c = cols[i]
             c.markdown(f"**{r['项目']}**")
-            c.markdown(f"<div style='color:{r['颜色']};font-size:18px'>{r['数值']:.1f}({r['状态']})</div>",unsafe_allow_html=True)
+            c.markdown(f"<div style='color:{r['颜色']}; font-size:18px'>{r['数值']:.1f} ({r['状态']})</div>", unsafe_allow_html=True)
         if basic_sugg:
             st.subheader("💡 基础信息建议")
-            for s in basic_sugg: st.write(f"- {s}")
+            for s in basic_sugg:
+                st.write(f"- {s}")
 
-        phase,hormone_df,hormone_sugg=evaluate_hormones(fsh,lh,e2,p,prl,t,month_day)
+        # 激素评估结果
+        phase, hormone_df, hormone_sugg = evaluate_hormones(fsh, lh, e2, p, prl, t, month_day)
         st.subheader(f"📌 周期阶段：{phase}")
-        h_recs=hormone_df.to_dict('records')
-        cols_h=st.columns(len(h_recs))
-        for i,r in enumerate(h_recs):
-            c=cols_h[i]
+        h_recs = hormone_df.to_dict('records')
+        cols_h = st.columns(len(h_recs))
+        for i, r in enumerate(h_recs):
+            c = cols_h[i]
+            ratio = min(max((r['数值'] - r['参考低']) / (r['参考高'] - r['参考低']), 0), 1)
             c.markdown(f"**{r['激素']}**")
-            ratio=min(max((r['数值']-r['参考低'])/(r['参考高']-r['参考低']),0),1)
-            c.markdown(f"<div style='color:{r['颜色']};font-size:18px'>{r['数值']:.1f}({r['状态']})</div>",unsafe_allow_html=True)
-            c.markdown(f"<div style='width:100%;background:#eee;border-radius:5px;height:10px'><div style='width:{ratio*100:.1f}%;background:{r['颜色']};height:100%;border-radius:5px'></div></div>",unsafe_allow_html=True)
-            c.markdown(f"参考: {r['参考低']} - {r['参考高']}")
-        st.plotly_chart(plot_hormones(hormone_df,phase),use_container_width=True)
+            c.markdown(f"<div style='color:{r['颜色']}; font-size:18px'>{r['数值']:.1f} ({r['状态']})</div>", unsafe_allow_html=True)
+            c.markdown(f"<div style='width:100%; background:#eee; border-radius:5px; height:10px'><div style='width:{ratio*100:.1f}%; background:{r['颜色']}; height:100%; border-radius:5px'></div></div>", unsafe_allow_html=True)
+            c.markdown(f"参考范围: {r['参考低']} - {r['参考高']}")
+        st.plotly_chart(plot_hormones(hormone_df, phase), use_container_width=True)
 
         # 激素管理建议
         if hormone_sugg:
             st.subheader("💡 激素管理建议")
-            for s in hormone_sugg: st.write(f"- {s}")
+            for s in hormone_sugg:
+                st.write(f"- {s}")
         else:
             st.success("激素水平均正常 → 维持健康生活方式")
 
-if __name__=="__main__": main()
+if __name__ == "__main__":
+    main()
