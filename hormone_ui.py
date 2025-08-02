@@ -127,7 +127,7 @@ def evaluate_hormones(fsh, lh, e2, p, prl, t, cycle_day):
     return phase, pd.DataFrame(data), list(filter(None, suggestions))
 
 # 绘制激素对比图
-def plot_hormones(df, phase):(df, phase):
+def plot_hormones(df, phase):
     fig = go.Figure()
     for idx, row in df.iterrows():
         fig.add_trace(go.Bar(x=[row['激素']], y=[row['数值']], marker_color=row['颜色'], name=row['状态']))
