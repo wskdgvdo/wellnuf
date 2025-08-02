@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 BASIC_REF = {
     "年龄": (0, 100),  # 年龄仅用于展示，无状态判断
     "AMH": (1.0, 4.0),
-    "月经周期长度": (24, 35),
+    "月经周期": (24, 35),
     "经期长度": (3, 7),
     "经期血量": (5, 80)
 }
@@ -14,8 +14,8 @@ BASIC_REF = {
 BASIC_SUGGESTIONS = {
     "AMH偏低": "卵巢储备下降 → 建议评估生育规划并咨询生殖科",
     "AMH偏高": "AMH偏高，需结合临床评估PCOS风险",
-    "月经周期长度偏低": "周期<24天，提示月经频发，建议排卵监测",
-    "月经周期长度偏高": "周期>35天，提示月经稀发，需评估卵巢储备与内分泌",
+    "月经周期偏低": "周期<24天，提示月经频发，建议排卵监测",
+    "月经周期偏高": "周期>35天，提示月经稀发，需评估卵巢储备与内分泌",
     "经期长度偏低": "经期<3天，子宫内膜发育可能不足",
     "经期长度偏高": "经期>7天，警惕子宫内膜增生或凝血异常",
     "经期血量偏低": "经血<5mL，考虑子宫内膜薄或排卵障碍",
@@ -58,7 +58,7 @@ def evaluate_basic(age, amh, cycle_len, period_len, blood_vol):
     metrics = {
         "年龄": age,
         "AMH": amh,
-        "月经周期长度": cycle_len,
+        "月经周期": cycle_len,
         "经期长度": period_len,
         "经期血量": blood_vol
     }
@@ -152,7 +152,7 @@ def main():
     st.header("一、基础信息输入")
     age = st.number_input("年龄 (岁)", min_value=0, max_value=120, value=30)
     amh = st.number_input("AMH (ng/mL)", min_value=0.0, step=0.1, value=2.0)
-    cycle_len = st.number_input("月经周期长度 (天)", min_value=1, max_value=365, value=28)
+    cycle_len = st.number_input("月经周期 (天)", min_value=1, max_value=365, value=28)
     period_len = st.number_input("经期长度 (天)", min_value=1, max_value=30, value=5)
     blood_vol = st.number_input("经期月经量 (mL)", min_value=0.0, step=1.0, value=30.0)
 
@@ -198,3 +198,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
