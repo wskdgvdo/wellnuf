@@ -51,67 +51,83 @@ AI_SUGGESTIONS = {
 }
 
 @st.cache_data
-def get_phase(cycle_day: int) -> str:
-    if cycle_day <= 5:
-        return "卵泡早期"
-    elif cycle_day <= 14:
-        return "排卵期"
-    else:
-        return "黄体期"
-
-@st.cache_data
-def evaluate_basic(age, amh, cycle, period_len, blood_vol):
-    data, suggestions = [], []
-    metrics = {"年龄": age, "AMH": amh, "月经周期": cycle, "经期长度": period_len, "经期血量": blood_vol}
-    for name, value in metrics.items():
-        low, high = BASIC_REF[name]
-        key = None
-        if name == "年龄":
-            status, color = "正常", "green"
-        else:
-            if value < low:
-                status, color, key = "偏低", "yellow", f"{name}偏低"
-            elif value > high:
-                status, color, key = "偏高", "red", f"{name}偏高"
-            else:
-                status, color = "正常", "green"
-        data.append({"项目": name, "数值": round(value,1), "状态": status, "颜色": color})
-        if key and key in BASIC_SUGGESTIONS:
-            suggestions.append(BASIC_SUGGESTIONS[key])
-    return pd.DataFrame(data), suggestions
-
-@st.cache_data
 def evaluate_hormones(fsh, lh, e2, p, prl, t, cycle_day):
     phase = get_phase(cycle_day)
     ref = REFERENCE[phase]
-    data, suggestions = [], set()
-    for name, value in {"FSH":fsh, "LH":lh, "E2":e2, "P":p, "PRL":prl, "T":t}.items():
-        low, high = ref[name]
-        # 特殊：月经第2-5天 E2 判断
-        if name == "E2" and 2 <= cycle_day <= 5:
-            if value > 50:
-                status, color = "偏高", "red"
-                suggestions.add(AI_SUGGESTIONS["E2早期偏高"])
-            else:
-                status, color = "正常", "green"
+    data = []
+    suggestions = set()
+    # 遍历激素值，包括P4作为特殊处理
+    hormones = {"FSH": fsh, "LH": lh, "E2": e2, "P4": p, "PRL": prl, "T": t}
+    for name, value in hormones.items():
+        # 获取参考范围
+        if name == "P4":
+            low, high = ref["P"]
         else:
+            low, high = ref[name]
+        status = "正常"
+        color = "green"
+        # P4 专项逻辑
+        if name == "P4":
+            # 1-14天 P4<0.8
+            if 1 <= cycle_day <= 14 and value < 0.8:
+                status, color = "偏低", "yellow"
+                suggestions.add(AI_SUGGESTIONS.get("P4卵泡期偏低"))
+            # 1-10天 P4>0.8
+            if 1 <= cycle_day <= 10 and value > 0.8:
+                status, color = "偏高", "red"
+                suggestions.add(AI_SUGGESTIONS.get("P4卵泡非排卵期偏高"))
+            # 4-5天 P4>0.5
+            if 4 <= cycle_day <= 5 and value > 0.5:
+                status, color = "偏高", "red"
+                suggestions.add(AI_SUGGESTIONS.get("P4早卵泡偏高"))
+            # 12-14天 P4>2
+            if 12 <= cycle_day <= 14 and value > 2:
+                status, color = "偏高", "red"
+                suggestions.add(AI_SUGGESTIONS.get("P4排卵前偏高"))
+            # >15天 P4>3
+            if cycle_day > 15 and value > 3:
+                status, color = "偏高", "red"
+                suggestions.add(AI_SUGGESTIONS.get("P4排卵后偏高"))
+            # 19-23天多档
+            if 19 <= cycle_day <= 23:
+                if 3 <= value <= 10:
+                    status, color = "正常", "green"
+                    suggestions.add(AI_SUGGESTIONS.get("P4黄体中期功能不全"))
+                if 15 <= value <= 30:
+                    status, color = "正常", "green"
+                    suggestions.add(AI_SUGGESTIONS.get("P4黄体功能良好"))
+                if value > 30:
+                    status, color = "偏高", "red"
+                    suggestions.add(AI_SUGGESTIONS.get("P4中期高提示妊娠"))
+            # 24-28天 P4>10 且 E2>150
+            if 24 <= cycle_day <= 28 and value > 10 and e2 > 150:
+                status, color = "偏高", "red"
+                suggestions.add(AI_SUGGESTIONS.get("P4末期妊娠可能"))
+        else:
+            # 通用激素逻辑
             if value < low:
                 status, color = "偏低", "yellow"
             elif value > high:
                 status, color = "偏高", "red"
-            else:
-                status, color = "正常", "green"
             key = f"{name}{status}"
             if key in AI_SUGGESTIONS:
                 suggestions.add(AI_SUGGESTIONS[key])
-        data.append({"激素":name, "数值":round(value,1), "状态":status, "颜色":color, "参考低":low, "参考高":high})
-    # LH/FSH 比值判断
+        # 记录结果
+        data.append({
+            "激素": name,
+            "数值": round(value, 1),
+            "状态": status,
+            "颜色": color,
+            "参考低": low,
+            "参考高": high
+        })
+    # LH/FSH 比值
     if fsh > 0 and lh / fsh > 2:
-        suggestions.add(AI_SUGGESTIONS["LH/FSH高"])
-    return phase, pd.DataFrame(data), list(suggestions)
+        suggestions.add(AI_SUGGESTIONS.get("LH/FSH高"))
+    return phase, pd.DataFrame(data), list(filter(None, suggestions))
 
-
-def plot_hormones(df, phase):
+# 绘制激素对比图
+def plot_hormones(df, phase):(df, phase):
     fig = go.Figure()
     for idx, row in df.iterrows():
         fig.add_trace(go.Bar(x=[row['激素']], y=[row['数值']], marker_color=row['颜色'], name=row['状态']))
