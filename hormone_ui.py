@@ -24,9 +24,9 @@ BASIC_SUGGESTIONS = {
 
 # 性激素参考范围
 REFERENCE = {
-    "卵泡早期": {"FSH": (3, 10), "LH": (2, 12), "E2": (20, 50), "P4": (0.1, 0.5), "PRL": (5, 25), "T": (20, 60)},
-    "排卵期":   {"FSH": (3, 10), "LH": (10, 20), "E2": (150, 400), "P4": (0, 3),  "PRL": (5, 25), "T": (20, 60)},
-    "黄体期":   {"FSH": (2, 8),  "LH": (1, 12), "E2": (100, 250), "P4": (10, 20), "PRL": (5, 25), "T": (20, 60)}
+    "卵泡早期": {"FSH": (5, 8), "LH": (5, 8), "E2": (20, 50), "P4": (0.1, 0.5), "PRL": (5, 25), "T": (20, 60)},
+    "排卵期": {"FSH": (3, 10), "LH": (10, 20), "E2": (150, 400), "P4": (0, 3), "PRL": (5, 25), "T": (20, 60)},
+    "黄体期": {"FSH": (2, 8), "LH": (1, 12), "E2": (100, 250), "P4": (10, 20), "PRL": (5, 25), "T": (20, 60)}
 }
 
 # 激素管理建议映射
@@ -55,9 +55,10 @@ AI_SUGGESTIONS = {
 def get_phase(day: int) -> str:
     if day <= 5:
         return "卵泡早期"
-    if day <= 14:
+    elif day <= 14:
         return "排卵期"
-    return "黄体期"
+    else:
+        return "黄体期"
 
 @st.cache_data
 def evaluate_basic(age, amh, cycle, period_len, blood_vol):
@@ -86,13 +87,11 @@ def evaluate_hormones(fsh, lh, e2, p4, prl, t, day):
     suggestions = set()
     hormones = {"FSH": fsh, "LH": lh, "E2": e2, "P4": p4, "PRL": prl, "T": t}
     for name, value in hormones.items():
-        low, high = ref[name if name != "P4" else "P4"]
+        low, high = ref[name]
         status, color = "正常", "green"
-        # E2早期逻辑
         if name == "E2" and 2 <= day <= 5 and value > 50:
             status, color = "偏高", "red"
             suggestions.add(AI_SUGGESTIONS["E2早期偏高"])
-        # P4多阶段逻辑
         elif name == "P4":
             if 1 <= day <= 14 and value < 0.8:
                 status, color = "偏低", "yellow"
@@ -129,7 +128,6 @@ def evaluate_hormones(fsh, lh, e2, p4, prl, t, day):
             if key in AI_SUGGESTIONS:
                 suggestions.add(AI_SUGGESTIONS[key])
         data.append({"激素": name, "数值": round(value, 1), "状态": status, "颜色": color, "参考低": low, "参考高": high})
-    # LH/FSH比值
     if fsh > 0 and lh / fsh > 2:
         suggestions.add(AI_SUGGESTIONS["LH/FSH高"])
     return phase, pd.DataFrame(data), list(suggestions)
