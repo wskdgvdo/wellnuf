@@ -44,48 +44,38 @@ AI_SUGGESTIONS = {
 
 # 获取周期阶段
 @st.cache_data
-def get_phase(cycle_day: int) -> str:
-    if cycle_day <= 5:
-        return "卵泡早期"
-    elif cycle_day <= 14:
-        return "排卵期"
-    else:
-        return "黄体期"
-
-# 评估基础信息
-@st.cache_data
 def evaluate_basic(age, amh, cycle_len, period_len, blood_vol):
     data = []
     suggestions = []
     metrics = {
-        "年龄": age,
-        "AMH": amh,
-        "月经周期长度": cycle_len,
-        "经期长度": period_len,
-        "经期血量": blood_vol
+        \"年龄\": age,
+        \"AMH\": amh,
+        \"月经周期长度\": cycle_len,
+        \"经期长度\": period_len,
+        \"经期血量\": blood_vol
     }
     for name, value in metrics.items():
         low, high = BASIC_REF[name]
-        key = None  # 初始化 key，避免未定义
-        if name == "年龄":
-            status, color = "正常", "green"
+        key = None
+        if name == \"年龄\":
+            status, color = \"正常\", \"green\"
         else:
             if value < low:
-                status, color = "偏低", "yellow"
-                key = f"{name}偏低"
+                status, color = \"偏低\", \"yellow\"
+                key = f\"{name}偏低\"
             elif value > high:
-                status, color = "偏高", "red"
-                key = f"{name}偏高"
+                status, color = \"偏高\", \"red\"
+                key = f\"{name}偏高\"
             else:
-                status, color = "正常", "green"
-        data.append({"项目": name, "数值": value, "状态": status, "颜色": color})
+                status, color = \"正常\", \"green\"
+        data.append({\"项目\": name, \"数值\": value, \"状态\": status, \"颜色\": color})
         if key and key in BASIC_SUGGESTIONS:
             suggestions.append(BASIC_SUGGESTIONS[key])
-    return pd.DataFrame(data), suggestions(data), suggestions
+    return pd.DataFrame(data), suggestions
 
 # 评估激素
 @st.cache_data
-def evaluate_hormones(fsh, lh, e2, p, prl, t, cycle_day):
+def evaluate_hormones(fsh, lh, e2, p, prl, t, cycle_day):(fsh, lh, e2, p, prl, t, cycle_day):
     phase = get_phase(cycle_day)
     ref = REFERENCE[phase]
     data = []
