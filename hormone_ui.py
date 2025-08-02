@@ -66,6 +66,7 @@ def evaluate_basic(age, amh, cycle_len, period_len, blood_vol):
     }
     for name, value in metrics.items():
         low, high = BASIC_REF[name]
+        key = None  # 初始化 key，避免未定义
         if name == "年龄":
             status, color = "正常", "green"
         else:
@@ -77,11 +78,10 @@ def evaluate_basic(age, amh, cycle_len, period_len, blood_vol):
                 key = f"{name}偏高"
             else:
                 status, color = "正常", "green"
-                key = None
         data.append({"项目": name, "数值": value, "状态": status, "颜色": color})
         if key and key in BASIC_SUGGESTIONS:
             suggestions.append(BASIC_SUGGESTIONS[key])
-    return pd.DataFrame(data), suggestions
+    return pd.DataFrame(data), suggestions(data), suggestions
 
 # 评估激素
 @st.cache_data
