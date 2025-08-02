@@ -160,7 +160,6 @@ def main():
             ch.markdown(f"参考范围: {row['参考低']} - {row['参考高']}")
         # 直观柱状图
         st.plotly_chart(plot_hormones(hormone_df, phase), use_container_width=True)
-        st.subheader("💡 激素管理建议")
         if hormone_sugg:
             for s in hormone_sugg:
                 st.write(f"- {s}")
