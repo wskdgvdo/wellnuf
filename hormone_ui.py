@@ -117,12 +117,12 @@ def main():
     month_day=st.number_input("月经天数 (第几天)",1,30,7)
 
     # 性激素输入
-    fsh=st.number_input("FSH (mIU/mL)",0.0,step=0.1,5.0)
-    lh=st.number_input("LH (mIU/mL)",0.0,step=0.1,5.0)
-    e2=st.number_input("雌二醇 E2 (pg/mL)",0.0,step=1.0,100.0)
-    p=st.number_input("孕酮 P (ng/mL)",0.0,step=0.1,1.0)
-    prl=st.number_input("泌乳素 PRL (ng/mL)",0.0,step=0.1,15.0)
-    t=st.number_input("睾酮 T (ng/dL)",0.0,step=0.1,25.0)
+    fsh = st.number_input("FSH (mIU/mL)", min_value=0.0, step=0.1, value=5.0)
+    lh = st.number_input("LH (mIU/mL)", min_value=0.0, step=0.1, value=5.0)
+    e2 = st.number_input("雌二醇 E2 (pg/mL)", min_value=0.0, step=1.0, value=100.0)
+    p = st.number_input("孕酮 P (ng/mL)", min_value=0.0, step=0.1, value=1.0)
+    prl = st.number_input("泌乳素 PRL (ng/mL)", min_value=0.0, step=0.1, value=15.0)
+    t = st.number_input("睾酮 T (ng/dL)", min_value=0.0, step=0.1, value=25.0)
 
     if st.button("开始评估"):
         basic_df,basic_sugg=evaluate_basic(age,amh,cycle,period_len,blood_vol)
