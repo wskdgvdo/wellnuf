@@ -24,11 +24,11 @@ BASIC_SUGGESTIONS = {
 
 # 性激素参考范围
 REFERENCE = {
-    "卵泡早期": {"FSH": (3, 10), "LH": (2, 12), "E2": (50, 300), "P": (0, 3),  "PRL": (5, 25), "T": (20, 60)},
-    "排卵期":   {"FSH": (3, 10), "LH": (10,20), "E2": (150,400), "P": (0, 3),  "PRL": (5, 25), "T": (20, 60)},
-    "黄体期":   {"FSH": (2, 8),  "LH": (1, 12), "E2": (100,250), "P": (10,20),  "PRL": (5, 25), "T": (20, 60)}
+    "卵泡早期": {"FSH": (3, 10), "LH": (2, 12), "E2": (20, 50), "P": (0, 3),  "PRL": (5, 25), "T": (20, 60)},
+    "排卵期":   {"FSH": (3, 10), "LH": (10, 20), "E2": (150, 400), "P": (0, 3),  "PRL": (5, 25), "T": (20, 60)},
+    "黄体期":   {"FSH": (2, 8),  "LH": (1, 12), "E2": (100, 250), "P": (10, 20),  "PRL": (5, 25), "T": (20, 60)}
 }
-# 激素AI管理建议
+# 激素AI管理建议（性激素六项）
 AI_SUGGESTIONS = {
     "FSH偏高":  "卵巢储备下降；建议检测AMH、窦卵泡数，补充辅酶Q10，规律作息，必要时就诊生殖科。",
     "FSH偏低":  "下丘脑-垂体功能抑制；排查甲状腺、体重过低、过度运动，并优化营养。",
@@ -36,6 +36,7 @@ AI_SUGGESTIONS = {
     "LH/FSH高": "典型PCOS表现；建议胰岛素曲线及卵巢B超评估，必要时内分泌科干预。",
     "E2偏低":   "卵泡发育不佳；可补充优质蛋白、健康脂肪，DHEA或辅酶Q10（遵医嘱）。",
     "E2偏高":   "卵巢高反应；监测卵泡，谨慎用药，遵医嘱调整方案。",
+    "E2早期偏高": "雌二醇水平偏高；可能存在卵泡提前发育或功能性卵泡囊肿，需结合B超影像报告判断。",
     "P偏高":    "排卵期P4偏高；可能黄体残留，建议下周期复查。",
     "P偏低":    "黄体功能不全；可补充黄体酮或维B6、锌，改善内膜容受性。",
     "PRL偏高":  "高泌乳素血症；避免压力/咖啡因，必要时垂体MRI。",
@@ -79,19 +80,29 @@ def evaluate_hormones(fsh, lh, e2, p, prl, t, cycle_day):
     data, suggestions = [], set()
     for name, value in {"FSH":fsh, "LH":lh, "E2":e2, "P":p, "PRL":prl, "T":t}.items():
         low, high = ref[name]
-        if value < low:
-            status, color = "偏低", "yellow"
-        elif value > high:
-            status, color = "偏高", "red"
+        # 特殊：月经第2-5天 E2 判断
+        if name == "E2" and 2 <= cycle_day <= 5:
+            if value > 50:
+                status, color = "偏高", "red"
+                suggestions.add(AI_SUGGESTIONS["E2早期偏高"])
+            else:
+                status, color = "正常", "green"
         else:
-            status, color = "正常", "green"
+            if value < low:
+                status, color = "偏低", "yellow"
+            elif value > high:
+                status, color = "偏高", "red"
+            else:
+                status, color = "正常", "green"
+            key = f"{name}{status}"
+            if key in AI_SUGGESTIONS:
+                suggestions.add(AI_SUGGESTIONS[key])
         data.append({"激素":name, "数值":round(value,1), "状态":status, "颜色":color, "参考低":low, "参考高":high})
-        key = f"{name}{status}"
-        if key in AI_SUGGESTIONS:
-            suggestions.add(AI_SUGGESTIONS[key])
+    # LH/FSH 比值判断
     if fsh > 0 and lh / fsh > 2:
         suggestions.add(AI_SUGGESTIONS["LH/FSH高"])
     return phase, pd.DataFrame(data), list(suggestions)
+
 
 def plot_hormones(df, phase):
     fig = go.Figure()
@@ -106,7 +117,6 @@ def main():
     st.set_page_config(page_title="女性激素六项评估", layout="wide")
     st.title("💡 女性激素六项评估工具 + AI管理建议")
 
-    # 基础信息卡片
     with st.expander("一、基础信息输入", expanded=True):
         age = st.number_input("年龄 (岁)", min_value=0, max_value=120, value=30)
         amh = st.number_input("AMH (ng/mL)", min_value=0.0, step=0.1, value=2.0)
@@ -115,7 +125,6 @@ def main():
         blood_vol = st.number_input("经期血量 (mL)", min_value=0.0, step=1.0, value=30.0)
         month_day = st.number_input("月经天数 (第几天)", min_value=1, max_value=30, value=7)
 
-    # 性激素卡片
     with st.expander("二、性激素六项输入", expanded=True):
         fsh = st.number_input("FSH (mIU/mL)", min_value=0.0, step=0.1, value=5.0)
         lh = st.number_input("LH (mIU/mL)", min_value=0.0, step=0.1, value=5.0)
@@ -124,9 +133,7 @@ def main():
         prl = st.number_input("泌乳素 PRL (ng/mL)", min_value=0.0, step=0.1, value=15.0)
         t = st.number_input("睾酮 T (ng/dL)", min_value=0.0, step=0.1, value=25.0)
 
-    # 评估按钮
     if st.button("开始评估"):
-        # 基础信息评估结果
         basic_df, basic_sugg = evaluate_basic(age, amh, cycle, period_len, blood_vol)
         st.subheader("📋 基础信息评估结果")
         recs = basic_df.to_dict('records')
@@ -140,7 +147,6 @@ def main():
             for s in basic_sugg:
                 st.write(f"- {s}")
 
-        # 激素评估结果
         phase, hormone_df, hormone_sugg = evaluate_hormones(fsh, lh, e2, p, prl, t, month_day)
         st.subheader(f"📌 周期阶段：{phase}")
         h_recs = hormone_df.to_dict('records')
@@ -154,7 +160,6 @@ def main():
             c.markdown(f"参考范围: {r['参考低']} - {r['参考高']}")
         st.plotly_chart(plot_hormones(hormone_df, phase), use_container_width=True)
 
-        # 激素管理建议
         if hormone_sugg:
             st.subheader("💡 激素管理建议")
             for s in hormone_sugg:
