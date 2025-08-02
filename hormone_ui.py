@@ -143,7 +143,7 @@ def main():
             for s in basic_sugg:
                 st.write(f"- {s}")
 
-        # 激素评估
+                # 激素评估
         phase, hormone_df, hormone_sugg = evaluate_hormones(fsh, lh, e2, p, prl, t, month_day)
         st.subheader(f"📌 周期阶段：{phase}")
         h_records = hormone_df.to_dict('records')
@@ -151,9 +151,16 @@ def main():
         for idx, row in enumerate(h_records):
             ch = cols_h[idx]
             ch.markdown(f"**{row['激素']}**")
-            ch.markdown(f"<div style='color:{row['颜色']}; font-size:18px'>{row['数值']:.1f} ({row['状态']})</div>", unsafe_allow_html=True)
+            # 进度条比例计算
+            ratio = min(max((row['数值'] - row['参考低']) / (row['参考高'] - row['参考低']), 0), 1)
+            # 值与状态
+            ch.markdown(f"<div style='font-size:18px; margin-bottom:4px; color:{row['颜色']};'>{row['数值']:.1f} ({row['状态']})</div>", unsafe_allow_html=True)
+            # 进度条展示
+            ch.markdown(f"<div style='width:100%; background-color:#eee; border-radius:5px; height:10px;'><div style='width:{ratio*100:.1f}%; background-color:{row['颜色']}; height:100%; border-radius:5px;'></div></div>", unsafe_allow_html=True)
             ch.markdown(f"参考范围: {row['参考低']} - {row['参考高']}")
+        # 直观柱状图
         st.plotly_chart(plot_hormones(hormone_df, phase), use_container_width=True)
+        st.subheader("💡 激素管理建议")(plot_hormones(hormone_df, phase), use_container_width=True)
         st.subheader("💡 激素管理建议")
         if hormone_sugg:
             for s in hormone_sugg:
