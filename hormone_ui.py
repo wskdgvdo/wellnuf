@@ -50,7 +50,7 @@ AI_SUGGESTIONS = {
     "T偏高":    "高雄激素；控制糖分，抗阻训练，肌醇类补充剂（遵医嘱）。"
 }
 
-@st.cache_datast.cache_data
+@st.cache_data
 def get_phase(cycle_day: int) -> str:
     if cycle_day <= 5:
         return "卵泡早期"
